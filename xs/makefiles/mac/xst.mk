@@ -97,6 +97,9 @@ ifeq ($(GOAL),debug)
 	ifeq ($(SANITIZER), undefined)
 		C_OPTIONS += -fsanitize=bool,builtin,enum,integer-divide-by-zero,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr -fno-sanitize-recover=bool,builtin,enum,integer-divide-by-zero,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr,array-bounds,function
 		LINK_OPTIONS += -fsanitize=bool,builtin,enum,integer-divide-by-zero,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr -fno-sanitize-recover=bool,builtin,enum,integer-divide-by-zero,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr,array-bounds,function
+	else ifeq ($(SANITIZER), coverage)
+		C_OPTIONS += -fprofile-instr-generate -fcoverage-mapping
+		LINK_OPTIONS += -fprofile-instr-generate -fcoverage-mapping
 	else
 		C_OPTIONS += -fsanitize=address -fsanitize-blacklist=xst_no_asan.txt
 		LINK_OPTIONS += -fsanitize=address

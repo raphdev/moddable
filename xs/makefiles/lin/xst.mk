@@ -107,6 +107,9 @@ ifeq ($(GOAL),debug)
 				C_OPTIONS += -fsanitize=array-bounds,function,unsigned-integer-overflow
 				LINK_OPTIONS += -fsanitize=array-bounds,function,unsigned-integer-overflow
 			endif
+		else ifeq ($(SANITIZER), coverage)
+			C_OPTIONS += -fprofile-instr-generate -fcoverage-mapping
+			LINK_OPTIONS += -fprofile-instr-generate -fcoverage-mapping
 		else
 			C_OPTIONS += -fsanitize=address
 			LINK_OPTIONS += -fsanitize=address
