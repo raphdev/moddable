@@ -243,8 +243,10 @@ static xsBooleanValue xsAlwaysWithinComputeLimit(xsMachine* machine, xsUnsignedV
 #endif
 
 #if OSSFUZZ
+
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     fuzz_oss(Data, Size);
+    //free_allthethings();
     return 0;
 }
 
@@ -1899,14 +1901,6 @@ int fuzz(int argc, char* argv[])
 	#define mxFuzzMeter (214748380)
 #endif
 
-static int lsan_disabled;
-
-// allow toggling ASAN leak-checking
-__attribute__((used)) int __lsan_is_turned_off()
-{
-	return lsan_disabled;
-}
-
 static xsBooleanValue xsWithinComputeLimit(xsMachine* machine, xsUnsignedValue index)
 {
 	// may be useful to print current index for debugging
@@ -1921,8 +1915,6 @@ static xsBooleanValue xsWithinComputeLimit(xsMachine* machine, xsUnsignedValue i
 
 int fuzz_oss(const uint8_t *Data, size_t script_size)
 {
-	lsan_disabled = 0;
-
 	xsCreation _creation = {
 		1 * 1024 * 1024, 	/* initialChunkSize */
 		1 * 1024 * 1024, 	/* incrementalChunkSize */
@@ -1939,6 +1931,7 @@ int fuzz_oss(const uint8_t *Data, size_t script_size)
 	size_t buffer_size = script_size + script_size + script_size + 1;			// (massively) over-allocate to have space if UTF-8 encoding expands (1 byte invalid byte becomes a 3-byte UTF-8 sequence)
 	char* buffer = (char *)malloc(buffer_size);
 	memcpy(buffer, Data, script_size);
+    int error = 0;
 
 	buffer[script_size] = 0;	// required when debugger active
 
@@ -2007,9 +2000,15 @@ int fuzz_oss(const uint8_t *Data, size_t script_size)
 	}
 	xsEndMetering(machine);
 	fxDeleteScript(machine->script);
+    error = machine->abortStatus;
 	xsDeleteMachine(machine);
 	fxTerminateSharedCluster();
 	free(buffer);
+
+    if(error) {
+        free_allthethings();
+    }
+
 	return 0;
 }
 
@@ -2170,9 +2169,6 @@ void fxAbort(txMachine* the, int status)
 		return;
 		
 	the->abortStatus = status;
- #if OSSFUZZ
-	lsan_disabled = 1;		// disable leak checking
- #endif
 
 	fxExitToHost(the);
 }
