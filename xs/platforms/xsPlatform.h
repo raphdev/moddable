@@ -206,6 +206,22 @@
 	#define c_va_start va_start
 #endif
 
+#if OSSFUZZ
+	extern void *fuzz_malloc(size_t len);
+	extern void *fuzz_calloc(size_t num, size_t size);
+	extern void *fuzz_realloc(void *ptr, size_t newsize);
+	extern void fuzz_free(void *ptr);
+	extern void fuzz_free_allthethings();
+
+	#define c_malloc fuzz_malloc
+	#define c_malloc_uint32 fuzz_malloc
+	#define c_calloc fuzz_calloc
+	#define c_realloc fuzz_realloc
+	#define c_free fuzz_free
+	#define c_free_uint32 fuzz_free
+	#define free_allthethings fuzz_free_allthethings
+#endif
+
 #ifndef c_calloc
 	#define c_calloc calloc
 #endif

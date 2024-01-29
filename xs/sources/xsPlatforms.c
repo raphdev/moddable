@@ -517,3 +517,105 @@ char *c_realpath(const char *path, char *real)
 #endif
 
 #endif
+
+#if OSSFUZZ
+struct alloc_node
+{
+	struct alloc_node *next;
+	void *pointer;
+} *alloc_list = C_NULL;
+
+void *
+fuzz_malloc(size_t len)
+{
+	void *ptr = malloc(len);
+	if (ptr)
+	{
+		struct alloc_node *entry = malloc(sizeof(*entry));
+		entry->pointer = ptr;
+		entry->next = alloc_list;
+		alloc_list = entry;
+	}
+	return ptr;
+}
+
+void *fuzz_calloc(size_t num, size_t size)
+{
+	void *ptr = calloc(num, size);
+	if (ptr)
+	{
+		struct alloc_node *entry = malloc(sizeof(*entry));
+		entry->pointer = ptr;
+		entry->next = alloc_list;
+		alloc_list = entry;
+	}
+	return ptr;
+}
+
+void *fuzz_realloc(void *ptr, size_t newsize)
+{
+	void *newptr = realloc(ptr, newsize);
+	if (newptr)
+	{
+		struct alloc_node *current_node = alloc_list;
+		while (current_node != C_NULL)
+		{
+			if (current_node->pointer == ptr)
+			{
+				current_node->pointer = newptr;
+			}
+			current_node = current_node->next;
+		}
+	}
+	return newptr;
+}
+
+void fuzz_free(void *ptr)
+{
+	if (ptr)
+	{
+		struct alloc_node *current_node = alloc_list;
+		struct alloc_node *prev = C_NULL;
+
+		while (current_node != C_NULL)
+		{
+			if (current_node->pointer == ptr)
+			{
+				struct alloc_node *next = current_node->next;
+				current_node->pointer = C_NULL;
+				// detach the current node from the list so we can free it
+				// a -> b (current) -> c becomes a -> c
+				// if there is no previous node, move the head forward
+				// b (current/head)-> c becomes c
+				if (prev != C_NULL)
+				{
+					prev->next = next;
+				}
+				else
+				{
+					alloc_list = next;
+				}
+				free(ptr);
+				free(current_node);
+				current_node = next;
+				break;
+			}
+			prev = current_node;
+			current_node = current_node->next;
+		}
+	}
+}
+
+void fuzz_free_allthethings()
+{
+	struct alloc_node *current_node = alloc_list;
+	struct alloc_node *oldcurrent_node;
+	while (current_node != C_NULL)
+	{
+		oldcurrent_node = current_node;
+		current_node = current_node->next;
+		fuzz_free(oldcurrent_node->pointer);
+	}
+}
+
+#endif
